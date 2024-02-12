@@ -6,35 +6,38 @@ process STRIP_KINETICS {
         path bam
 
     output:
-        path "*.primrose.bam",  emit: bam
-        path "*.primrose.bam.bai",  emit: bai
+        path "*.methylation_prediction.bam",  emit: bam
+        path "*.methylation_prediction.bam.bai",  emit: bai
         path "versions.yaml", emit: versions
 
     script:
+
+        def methylationPredictionProgram = params.sequencerType == 'Revio' ? 'jasmine' : 'primrose'
+
         """
-        PRIMROSE_WAS_RUN=true
-        if ! samtools view -H $bam | grep ^@PG | grep -q ID:primrose ; then PRIMROSE_WAS_RUN=false; fi
+        METHYLATION_PREDICTION_WAS_RUN=true
+        if ! samtools view -H $bam | grep ^@PG | grep -q ID:methylation_prediction ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
 
-        PRIMROSE_KEPT_KINETECS=false
-        if samtools view -H $bam | grep ^@PG | grep ID:primrose | grep -q keep-kinetics; then PRIMROSE_KEPT_KINETECS=true; fi
+        METHYLATION_PREDICTION_KEPT_KINETECS=false
+        if samtools view -H $bam | grep ^@PG | grep ID:methylation_prediction | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
 
-        if [[ "\$PRIMROSE_WAS_RUN" = false || "\$PRIMROSE_KEPT_KINETECS" = true ]] ; then
-            primrose \
+        if [[ "\$METHYLATION_PREDICTION_WAS_RUN" = false || "\$METHYLATION_PREDICTION_KEPT_KINETECS" = true ]] ; then
+            $methylationPredictionProgram \
                 -j $task.cpus \
                 $bam \
-                ${bam}.primrose.bam;
+                ${bam}.methylation_prediction.bam;
         else
-                ln $bam ${bam}.primrose.bam;
+                ln $bam ${bam}.methylation_prediction.bam;
         fi
 
         samtools \
             index \
             -@ $task.cpus \
-            ${bam}.primrose.bam
+            ${bam}.methylation_prediction.bam
 
         cat <<-END_VERSIONS > versions.yaml
         '${task.process}_${task.index}':
-            primrose: \$(primrose --version | grep ^primrose | awk '{print \$2}')
+            $methylationPredictionProgram: \$(methylationPredictionProgram --version | grep ^methylation_prediction | awk '{print \$2}')
             samtools: \$(samtools --version | grep ^samtools | awk '{print \$2}')
         END_VERSIONS
         """
