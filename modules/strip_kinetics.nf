@@ -16,10 +16,10 @@ process STRIP_KINETICS {
 
         """
         METHYLATION_PREDICTION_WAS_RUN=true
-        if ! samtools view -H $bam | grep ^@PG | grep -q ID:methylation_prediction ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
+        if ! samtools view -H $bam | grep ^@PG | grep -q ID:$methylationPredictionProgram ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
 
         METHYLATION_PREDICTION_KEPT_KINETECS=false
-        if samtools view -H $bam | grep ^@PG | grep ID:methylation_prediction | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
+        if samtools view -H $bam | grep ^@PG | grep ID:$methylationPredictionProgram | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
 
         if [[ "\$METHYLATION_PREDICTION_WAS_RUN" = false || "\$METHYLATION_PREDICTION_KEPT_KINETECS" = true ]] ; then
             $methylationPredictionProgram \
@@ -37,7 +37,7 @@ process STRIP_KINETICS {
 
         cat <<-END_VERSIONS > versions.yaml
         '${task.process}_${task.index}':
-            $methylationPredictionProgram: \$(methylationPredictionProgram --version | grep ^methylation_prediction | awk '{print \$2}')
+            $methylationPredictionProgram: \$($methylationPredictionProgram --version | grep ^methylation_prediction | awk '{print \$2}')
             samtools: \$(samtools --version | grep ^samtools | awk '{print \$2}')
         END_VERSIONS
         """
