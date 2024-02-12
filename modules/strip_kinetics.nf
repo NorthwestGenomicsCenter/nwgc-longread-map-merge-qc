@@ -37,7 +37,7 @@ process STRIP_KINETICS {
 
         cat <<-END_VERSIONS > versions.yaml
         '${task.process}_${task.index}':
-            $methylationPredictionProgram: \$($methylationPredictionProgram --version | grep ^methylation_prediction | awk '{print \$2}')
+            $methylationPredictionProgram: \$($methylationPredictionProgram --version | grep ^$methylationPredictionProgram | awk '{print \$2}')
             samtools: \$(samtools --version | grep ^samtools | awk '{print \$2}')
         END_VERSIONS
         """
