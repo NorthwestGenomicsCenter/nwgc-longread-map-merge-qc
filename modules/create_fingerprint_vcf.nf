@@ -2,16 +2,17 @@ process CREATE_FINGERPRINT_VCF {
 
     label "CREATE_FINGERPRINT_VCF_${params.sampleId}_${params.userId}"
 
-    publishDir "$params.sampleQCDirectory", mode: 'link', pattern: '*.fingerprint.vcf.gz'
-    publishDir "$params.sampleQCDirectory", mode: 'link', pattern: '*.fingerprint.vcf.gz.tbi'
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.fingerprint.vcf.gz'
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.fingerprint.vcf.gz.tbi'
  
     input:
         path bam
         path bai
+        val(qcFolder)
 
     output:
-        path "*.fingerprint.vcf.gz"
-        path "*.fingerprint.vcf.gz.tbi"
+        path "*.fingerprint.vcf.gz", emit: vcfs
+        path "*.fingerprint.vcf.gz.tbi", emit: vcfindexes
         path "versions.yaml", emit: versions
 
     script:
@@ -19,7 +20,7 @@ process CREATE_FINGERPRINT_VCF {
         def bcftools_platform_specific_configuration_profile = params.sequencingPlatform.equalsIgnoreCase("pacbio") ? "pacbio-ccs" : "ont"
 
         """
-        mkdir -p $params.sampleQCDirectory
+        # mkdir -p $qcFolder
 
         bcftools \
             mpileup \

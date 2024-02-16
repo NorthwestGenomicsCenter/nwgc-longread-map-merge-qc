@@ -10,11 +10,16 @@ process MAP_HIFI_BAM {
         path "versions.yaml", emit: versions
 
     script:
+        def numCPUs = Integer.valueOf("$task.cpus")
+        def align_threads = numCPUs
+        def sort_threads = Math.min(8, Math.ceil(numCPUs/4).intValue())
+
         """
         pbmm2 \\
             align \\
-            --num-threads $task.cpus \\
+            --num-threads ${task.cpus} \\
             --unmapped \\
+            --sort -J $sort_threads -m 2G \\
             $params.referenceGenome \\
             $hiFiBam \\
             ${hiFiBam}.mapped.bam

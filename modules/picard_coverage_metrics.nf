@@ -4,14 +4,15 @@ process PICARD_COVERAGE_METRICS {
 
     Boolean isOnt = params.sequencingPlatform.equalsIgnoreCase("ont")
 
-    publishDir "$params.sampleQCDirectory", mode: 'link', pattern: '*.picard.coverage.txt'
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.picard.coverage.txt'
  
     input:
         path bam
         path bai
+        val(qcFolder)
 
     output:
-        path "*.picard.coverage.txt"
+        path "*.picard.coverage.txt", emit: stats
         path "versions.yaml", emit: versions
 
     script:
@@ -19,7 +20,7 @@ process PICARD_COVERAGE_METRICS {
         def minimumBaseQuality = params.sequencingPlatform.equalsIgnoreCase("ont") ? '10' : '20'
 
         """
-        mkdir -p $params.sampleQCDirectory
+        # mkdir -p $qcFolder
 
         java \
             -XX:InitialRAMPercentage=80 \

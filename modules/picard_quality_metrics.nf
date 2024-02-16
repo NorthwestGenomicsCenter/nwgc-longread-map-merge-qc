@@ -2,14 +2,15 @@ process PICARD_QUALITY_METRICS {
 
     label "PICARD_QUALITY_METRICS_${params.sampleId}_${params.userId}"
 
-    publishDir "$params.sampleQCDirectory", mode: 'link', pattern: '*.picard.quality.txt'
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.picard.quality.txt'
  
     input:
         path bam
         path bai
+        val(qcFolder)
 
     output:
-        path "*.picard.quality.txt"
+        path "*.picard.quality.txt", emit: stats
         path "versions.yaml",  emit: versions
 
     script:
@@ -17,7 +18,7 @@ process PICARD_QUALITY_METRICS {
         def javaMemory = taskMemoryString.substring(0, taskMemoryString.length() - 1).replaceAll("\\s","")
 
         """
-        mkdir -p $params.sampleQCDirectory
+        # mkdir -p $qcFolder
 
         java -Xmx$javaMemory \
             -jar \$PICARD_DIR/picard.jar CollectQualityYieldMetrics \

@@ -2,21 +2,22 @@ process CONTAMINATION_CHECK {
 
     label "CONTAMINATION_CHECK_${params.sampleId}_${params.userId}"
 
-    publishDir "$params.sampleQCDirectory", mode: 'link', pattern: '*.VerifyBamID.selfSM'
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.VerifyBamID.selfSM'
 
     input:
         path bam
         path bai
+        val(qcFolder)
 
     output:
-        path "*.VerifyBamID.selfSM"
+        path "*.VerifyBamID.selfSM", emit: verifications
         path "versions.yaml", emit: versions
 
     script:
         def disableSanityCheck = params.mode == 'test' ? '--DisableSanityCheck' : ''
 
         """
-        mkdir -p $params.sampleQCDirectory
+        # mkdir -p $qcFolder
 
         VERIFYBAMID_RESOURCE=\$MOD_GSVERIFYBAMID_DIR/resource
 

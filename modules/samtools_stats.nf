@@ -2,19 +2,20 @@ process SAMTOOLS_STATS {
 
     label "SAMTOOLS_STATS_${params.sampleId}_${params.userId}"
 
-    publishDir "$params.sampleQCDirectory", mode: 'link', pattern: '*.stats.txt'
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.stats.txt'
 
     input:
         path bam
         path bai
+        val(qcFolder)
 
     output:
-        path "*.stats.txt"
+        path "*.stats.txt", emit: stats
         path "versions.yaml", emit: versions
 
     script:
         """
-        mkdir -p $params.sampleQCDirectory
+        # mkdir -p $qcFolder
 
         samtools \
             stats \

@@ -13,41 +13,57 @@ workflow LONGREAD_QC {
     take:
         bam
         bai
+        sampleFolder
+        qcFolder
+        qcToRun
 
     main:
 
-       def runAll = params.qcToRun.contains("All")
+        def runAll = qcToRun.contains("All")
+        def ch_qcouts = Channel.empty()
+        def ch_nanoplotqcouts = Channel.empty()
 
-        if (runAll || params.qcToRun.contains("samtools_stats")) {
-            SAMTOOLS_STATS(bam, bai)
+        log.info("LONGREAD_QC: qcFolder = ${qcFolder}")
+
+        if (runAll || qcToRun.contains("samtools_stats")) {
+            SAMTOOLS_STATS(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(SAMTOOLS_STATS.out.versions)
+            ch_qcouts = ch_qcouts.mix(SAMTOOLS_STATS.out.stats)
         }
 
-        if (runAll || params.qcToRun.contains("quality")) {
-            PICARD_QUALITY_METRICS(bam, bai)
+        if (runAll || qcToRun.contains("quality")) {
+            PICARD_QUALITY_METRICS(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(PICARD_QUALITY_METRICS.out.versions)
+            ch_qcouts = ch_qcouts.mix(PICARD_QUALITY_METRICS.out.stats)
         }
 
-        if (runAll || params.qcToRun.contains("coverage")) {
-            PICARD_COVERAGE_METRICS(bam, bai)
+        if (runAll || qcToRun.contains("coverage")) {
+            PICARD_COVERAGE_METRICS(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(PICARD_COVERAGE_METRICS.out.versions)
+            ch_qcouts = ch_qcouts.mix(PICARD_COVERAGE_METRICS.out.stats)
         }
 
-        if (runAll || params.qcToRun.contains("nanoplot")) {
-            NANO_PLOT(bam, bai)
+        if (runAll || qcToRun.contains("nanoplot")) {
+            NANO_PLOT(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(NANO_PLOT.out.versions)
+            ch_nanoplotqcouts = ch_nanoplotqcouts.mix(NANO_PLOT.out.stats, NANO_PLOT.out.html, NANO_PLOT.out.png)
         }
 
-        if (runAll || params.qcToRun.contains("contamination")) {
-            CONTAMINATION_CHECK(bam, bai)
+        if (runAll || qcToRun.contains("contamination")) {
+            CONTAMINATION_CHECK(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(CONTAMINATION_CHECK.out.versions)
+            ch_qcouts = ch_qcouts.mix(CONTAMINATION_CHECK.out.verifications)
         }
 
-        if (runAll || params.qcToRun.contains("fingerprint")) {
-            CREATE_FINGERPRINT_VCF(bam, bai)
+        if (runAll || qcToRun.contains("fingerprint")) {
+            CREATE_FINGERPRINT_VCF(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(CREATE_FINGERPRINT_VCF.out.versions)
+            ch_qcouts = ch_qcouts.mix(CREATE_FINGERPRINT_VCF.out.vcfs, CREATE_FINGERPRINT_VCF.out.vcfindexes)
         }
- 
-        ch_versions.unique().collectFile(name: 'qc_software_versions.yaml', storeDir: "${params.sampleDirectory}")
 
+        ch_versions.unique().collectFile(name: 'qc_software_versions.yaml', storeDir: "${sampleFolder}")
+
+    emit:
+        qcouts = ch_qcouts
+        nanoplotqcouts = ch_nanoplotqcouts
 }

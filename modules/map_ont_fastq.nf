@@ -14,15 +14,17 @@ process MAP_ONT_FASTQ {
         minimap2 \\
             -a \\
             -x map-ont \\
+            -t ${task.cpus} \\
             --MD \\
             $params.referenceGenome \\
             $fastq \\
         | \\
         samtools \\
-            view \\
-            -b \\
+            sort \\
             - \\
+            -@ 3 -m 1G \\
             -o ${fastq}.mapped.bam
+
 
         cat <<-END_VERSIONS > versions.yaml
         '${task.process}_${task.index}':
