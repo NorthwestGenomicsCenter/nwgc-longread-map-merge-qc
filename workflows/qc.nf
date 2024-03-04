@@ -40,7 +40,7 @@ workflow LONGREAD_QC {
         if (runAll || qcToRun.contains("coverage")) {
             MOSDEPTH(bam, bai, qcFolder)
             ch_versions = ch_versions.mix(MOSDEPTH.out.versions)
-            ch_qcouts = ch_qcouts.mix(MOSDEPTH.out.summary, MOSEPTH.out.thresholds, MOSDEPTH.out.thresholds_index)
+            ch_qcouts = ch_qcouts.mix(MOSDEPTH.out.summary, MOSDEPTH.out.thresholds, MOSDEPTH.out.thresholds_index)
         }
 
         if (runAll || qcToRun.contains("nanoplot")) {
