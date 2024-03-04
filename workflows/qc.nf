@@ -1,6 +1,6 @@
 include { SAMTOOLS_STATS } from '../modules/samtools_stats.nf'
 include { PICARD_QUALITY_METRICS } from '../modules/picard_quality_metrics.nf'
-include { PICARD_COVERAGE_METRICS } from '../modules/picard_coverage_metrics.nf'
+include { MOSDEPTH } from '../modules/mosdepth.nf'
 include { NANO_PLOT } from '../modules/nano_plot.nf'
 include { CONTAMINATION_CHECK } from '../modules/contamination_check.nf'
 include { CREATE_FINGERPRINT_VCF } from '../modules/create_fingerprint_vcf.nf'
@@ -38,9 +38,9 @@ workflow LONGREAD_QC {
         }
 
         if (runAll || qcToRun.contains("coverage")) {
-            PICARD_COVERAGE_METRICS(bam, bai, qcFolder)
-            ch_versions = ch_versions.mix(PICARD_COVERAGE_METRICS.out.versions)
-            ch_qcouts = ch_qcouts.mix(PICARD_COVERAGE_METRICS.out.stats)
+            MOSDEPTH(bam, bai, qcFolder)
+            ch_versions = ch_versions.mix(MOSDEPTH.out.versions)
+            ch_qcouts = ch_qcouts.mix(MOSDEPTH.out.stats)
         }
 
         if (runAll || qcToRun.contains("nanoplot")) {

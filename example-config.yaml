@@ -15,6 +15,7 @@ sampleId: <samplify sampleId>  # e.g sampleId: 123456
 sequencingPlatform: "<name of sequencing platform (PacBio or ONT)"   		# e.g. sequencingPlatform: "PacBio"
 sequencerType: "<name of sequencer type (Sequel or Revio or Promethion)>"   # e.g. sequencerType: "Revio"
 sequencingTarget: "<name of sequencing target>"   							# e.g. sequencingTarget: "WHOLE_GENOME"
+sequencingTargetBed: "<full path to sequencing target bed file>"            # e.g. sequencingTargetBed: "/net/nwgc/vol1/references/human/grc38/targets/WHOLE_GENOME/WHOLE_GENOME.grc38.bed"
 
 # Reference Genome
 referenceGenome: "<full path to reference genome fasta>"    # e.g. referenceGenome: "/net/nwgc/vol1/references/human/grc38/genome/pacbio/human_GRCh38_no_alt_analysis_set.fasta"
