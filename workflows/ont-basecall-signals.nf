@@ -36,7 +36,8 @@ process BASECALL_ONLY_DORADO {
         path("${params.sampleId}_${chunk_idx}.bam"), emit: uabams
         path("*.pod5"), emit: converted_pod5s, optional: true
     script:
-        def cudaDevice = (null == params.ontCudaDevice) ? 'cuda:all' : params.ontCudaDevice
+        // def cudaDevice = (null == params.ontCudaDevice) ? 'cuda:all' : params.ontCudaDevice
+        def cudaDevice = (null == params.ontCudaDevice) ? 'cuda:${SGE_HGR_cuda}' : params.ontCudaDevice
         // TODO: decide if R9 or R10?
         def model_arg = (null == basecaller_model) ? "\${MODELS_ROOT}/dna_r10.4.1_e8.2_400bps_sup@v3.5.2" : "${basecaller_model}"
         def mods_arg = (null == basecaller_mods) ? '' : "--modified-bases ${basecaller_mods}"
@@ -271,7 +272,7 @@ workflow ONT_SETUP_BASECALL_ENVIRONMENT {
         NwgcONTCore.setWorkflowMetadata(workflow)
         ontDataFolder = NwgcONTCore.getONTDataFolder(params)
         outPrefix = NwgcONTCore.getReleaseSupPrefix(params)
-        ontSubmitBaseCallJob = true
+        ontSubmitBaseCallJob = false
         if (params.containsKey('ontSubmitBaseCallJob')) {
             ontSubmitBaseCallJob = params.ontSubmitBaseCallJob
         }
@@ -287,21 +288,6 @@ workflow ONT_SETUP_BASECALL_ENVIRONMENT {
             .map{runAcqFolder, runAcqBams -> 
                 NwgcONTCore.setupRunAcquisition(runAcqFolder, runAcqBams, params.sampleId, ontDataFolder, ontSubmitBaseCallJob)
             }
-
-        /*
-        // inform user how-to submit
-        ontRunAcqs.subscribe {
-            println ""
-            println "##########"
-            println "### To basecall for ${params.sampleId} - ${it.runAcqID}"
-            println "##########"
-            println "cd ${it.runacq.workdir}"
-            def scriptFPN = new File("${it.basecall.script}")
-            println "qsub -P dna -q il.q ${scriptFPN.name}"
-            println "# submitted jobid: ${it.basecall.jobid}"
-            println ""
-        }
-        */
 
         // TODO: consider => write the release version of the file?
         ontRunAcqs
