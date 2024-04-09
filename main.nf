@@ -25,6 +25,7 @@ workflow {
         else if (params.sequencingPlatform.equalsIgnoreCase("ONT")) {
             if (params.containsKey('ontReleaseData') && params.ontReleaseData) {
                 // --ontReleaseData true
+                log.info("ONT workspace framework: release rebasecall data")
                 ONT_BACKUP_LIVEMODEL()
                 ONT_MERGE_QC_SUP_BAMS()
                 PUBLISH_RELEASE(
@@ -49,6 +50,7 @@ workflow {
             } else if (params.containsKey('ontBaseCall') && params.ontBaseCall) {
                 // --ontBaseCall true
                 // perform the basecalling
+                log.info("ONT workspace framework: perform re-basecall")
                 ONT_BASECALL()
                 // all QCs: might be unnecessary
                 // def fundamentalQCs = ['All']
@@ -61,69 +63,55 @@ workflow {
                 LONGREAD_QC(ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
                     params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
 
+            } else if (params.containsKey('ontSetupBasecall') && params.ontSetupBasecall) {
+                // --ontSetupBasecall true
+                // setup the basecalling environment only
+                // and submit basecalling job handled via "--ontBaseCall true"
+                log.info("ONT workspace framework: rebasecall workspace setup")
+                ONT_SETUP_BASECALL_ENVIRONMENT()
+            } else if (params.containsKey('ontRebasecall') && params.ontRebasecall) {
+                // use the framework of ONT workspace
+                // set up framework environment
+                //   + run original HAC operations (but write to ONT workspace too)
+                ontDataFolder = NwgcONTCore.getONTDataFolder(params)
+                releaseLiveModelFolder = NwgcONTCore.getReleaseLiveModelFolder(ontDataFolder)
+                // releaseLiveModelFolder = "${params.sampleDirectory}"
+                log.info("ONT workspace framework: rebasecall and releaseLiveModelFolder = ${releaseLiveModelFolder}")
+
+                ONT_SETUP_BASECALL_ENVIRONMENT()
+
+                ONT_MAP_MERGE_BAMS([
+                    "outFolder": "${releaseLiveModelFolder}"
+                    , "outPrefix": "${params.sampleId}.${params.sequencingTarget}"
+                    ])
+                PUBLISH_RELEASE(
+                    ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
+                    ONT_MAP_MERGE_BAMS.out.bam_md5sum, 
+                    params.sampleDirectory)
+
+                releaseLiveModelQCFolder = NwgcONTCore.getReleaseLiveModelQCFolder(ontDataFolder)
+                log.info("releaseLiveModelQCFolder = ${releaseLiveModelQCFolder}")
+
+                def fundamentalQCs = params.qcToRun
+                ////FIXME: commented out for speed testing
+                //// def fundamentalQCs = ['samtools_stats','quality','nanoplot','fingerprint']
+                LONGREAD_QC(ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
+                    releaseLiveModelFolder, releaseLiveModelQCFolder, fundamentalQCs)
+                PUBLISH_RELEASE_QC_ROOT(LONGREAD_QC.out.qcouts.flatten(), params.sampleQCDirectory)
+                PUBLISH_RELEASE_QC_NANAPLOT(LONGREAD_QC.out.nanoplotqcouts.flatten(), "${params.sampleQCDirectory}/nanoPlot")
             } else {
-                if (params.containsKey('ontSetupBasecall')) {
-                    if (params.ontSetupBasecall) {
-                        // --ontSetupBasecall true
-                        // setup the basecalling environment only
-                        // and submit basecalling job handled via "--ontBaseCall true"
-                        ONT_SETUP_BASECALL_ENVIRONMENT()
-                    } else {
-                        // --ontSetupBasecall false
-                        ontDataFolder = NwgcONTCore.getONTDataFolder(params)
-                        releaseLiveModelFolder = NwgcONTCore.getReleaseLiveModelFolder(ontDataFolder)
-                        // releaseLiveModelFolder = "${params.sampleDirectory}"
-                        log.info("!ontSetupBasecall: releaseLiveModelFolder = ${releaseLiveModelFolder}")
-                        ONT_MAP_MERGE_BAMS([
-                            "outFolder": "${releaseLiveModelFolder}"
-                            , "outPrefix": "${params.sampleId}.${params.sequencingTarget}"
-                            ])
-                        PUBLISH_RELEASE(
-                            ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                            ONT_MAP_MERGE_BAMS.out.bam_md5sum, 
-                            params.sampleDirectory)
+                // equivalent: --no_ontReleaseData --no_ontBaseCall --no_ontSetupBasecall --no_ontRebasecall
+                // this is the environment from <= v1.7.0
+                // run as standalone; i.e. does not use the ONT workspace framework
+                log.info("Standalone mode: writing results directly to ${params.sampleDirectory}")
+                ONT_MAP_MERGE_BAMS([
+                    "outFolder": "${params.sampleDirectory}"
+                    , "outPrefix": "${params.sampleId}.${params.sequencingTarget}"
+                    ])
 
-                        releaseLiveModelQCFolder = NwgcONTCore.getReleaseLiveModelQCFolder(ontDataFolder)
-                        log.info("releaseLiveModelQCFolder = ${releaseLiveModelQCFolder}")
-
-                        def fundamentalQCs = params.qcToRun
-                        //// FIXME: commented out for speed testing
-                        //// def fundamentalQCs = ['samtools_stats','quality','nanoplot','fingerprint']
-                        LONGREAD_QC(ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                            releaseLiveModelFolder, releaseLiveModelQCFolder, fundamentalQCs)
-                        PUBLISH_RELEASE_QC_ROOT(LONGREAD_QC.out.qcouts.flatten(), params.sampleQCDirectory)
-                        PUBLISH_RELEASE_QC_NANAPLOT(LONGREAD_QC.out.nanoplotqcouts.flatten(), "${params.sampleQCDirectory}/nanoPlot")
-                    }
-                } else {
-                    // equivalent: --no_ontReleaseData --no_ontBaseCall --no_ontSetupBasecall
-                    // this is the environment from <= v1.7.0
-                    // so, we will perform the setup before proceeding 
-                    //     with original operations on HAC
-                    ontDataFolder = NwgcONTCore.getONTDataFolder(params)
-                    releaseLiveModelFolder = NwgcONTCore.getReleaseLiveModelFolder(ontDataFolder)
-                    // releaseLiveModelFolder = "${params.sampleDirectory}"
-                    log.info("default: releaseLiveModelFolder = ${releaseLiveModelFolder}")
-                    ONT_SETUP_BASECALL_ENVIRONMENT()
-                    ONT_MAP_MERGE_BAMS([
-                        "outFolder": "${releaseLiveModelFolder}"
-                        , "outPrefix": "${params.sampleId}.${params.sequencingTarget}"
-                        ])
-                    PUBLISH_RELEASE(
-                        ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                        ONT_MAP_MERGE_BAMS.out.bam_md5sum, 
-                        params.sampleDirectory)
-
-                    releaseLiveModelQCFolder = NwgcONTCore.getReleaseLiveModelQCFolder(ontDataFolder)
-                    log.info("releaseLiveModelQCFolder = ${releaseLiveModelQCFolder}")
-
-                    def fundamentalQCs = params.qcToRun
-                    ////FIXME: commented out for speed testing
-                    //// def fundamentalQCs = ['samtools_stats','quality','nanoplot','fingerprint']
-                    LONGREAD_QC(ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                        releaseLiveModelFolder, releaseLiveModelQCFolder, fundamentalQCs)
-                    PUBLISH_RELEASE_QC_ROOT(LONGREAD_QC.out.qcouts.flatten(), params.sampleQCDirectory)
-                    PUBLISH_RELEASE_QC_NANAPLOT(LONGREAD_QC.out.nanoplotqcouts.flatten(), "${params.sampleQCDirectory}/nanoPlot")
-                }
+                def fundamentalQCs = params.qcToRun
+                LONGREAD_QC(ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
+                    params.sampleQCDirectory, "${params.sampleQCDirectory}/nanoPlot", fundamentalQCs)
             }
         }
         else {
@@ -136,9 +124,13 @@ workflow {
 }
 
 workflow.onError {
-    NwgcCore.error(workflow, "$params.sampleId")
+    if (params.containsKey('rabbitHost') && params.rabbitHost!="") {
+        NwgcCore.error(workflow, "$params.sampleId")
+    }
 }
 
 workflow.onComplete {
-    NwgcCore.processComplete(workflow, "$params.sampleId")
+    if (params.containsKey('rabbitHost') && params.rabbitHost!="") {
+        NwgcCore.processComplete(workflow, "$params.sampleId")
+    }
 }
