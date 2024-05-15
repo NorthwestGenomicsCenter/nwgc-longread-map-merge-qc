@@ -111,7 +111,7 @@ workflow {
 
                 def fundamentalQCs = params.qcToRun
                 LONGREAD_QC(ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                    params.sampleQCDirectory, "${params.sampleQCDirectory}/nanoPlot", fundamentalQCs)
+                    params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
             }
         }
         else {
