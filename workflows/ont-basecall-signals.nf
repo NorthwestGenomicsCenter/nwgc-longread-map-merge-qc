@@ -140,8 +140,10 @@ workflow ONT_BASECALL {
             exit 0
         } else {
 
-            // our default naming is: PAM05070_pass_c2f39984_a1f291a3_0
-            def pattern_FC_PF_runid_acqid_chunkid = /[A-Z]{3}[0-9]{5}_(pass|fail)_[0-9a-zA-Z]{8}_[A-Za-z0-9]{8}_[0-9]*/
+            // our default naming is: PAM05070_pass_c2f39984_a1f291a3_0 or PAM05070_fail_c2f39984_a1f291a3_0
+            def pattern_FC_PFS_runid_acqid_chunkid = /[A-Z]{3}[0-9]{5}_(pass|fail|skip)_[0-9a-zA-Z]{8}_[A-Za-z0-9]{8}_[0-9]*/
+            // our PROM2 naming is: PAW29836_88c8ee51_fcdf2e5f_0 or PAW29836_skip_88c8ee51_fcdf2e5f_0
+            def pattern_FC_runid_acqid_chunkid = /[A-Z]{3}[0-9]{5}_[0-9a-zA-Z]{8}_[A-Za-z0-9]{8}_[0-9]*/
 
             // TODO: null
             // ${MODELS_ROOT}
@@ -150,6 +152,14 @@ workflow ONT_BASECALL {
 
             basecaller_mods = params.ontBaseCallBaseModifications
             log.info "Basecaller modifications = ${basecaller_mods}"
+
+            def basecaller_batch_size = params.basecaller_num_chunk_per_batch
+            if (params.signalExtensions.equalsIgnoreCase("pod5")) {
+                if (basecaller_batch_size>2) {
+                    basecaller_batch_size = 1
+                    log.info "Adjusting pod5 batch size from ${params.basecaller_num_chunk_per_batch} to ${basecaller_batch_size}"
+                }
+            }
 
             Integer chunk_idx = 0
             ontSignals_chunks = Channel.empty()
@@ -161,7 +171,8 @@ workflow ONT_BASECALL {
                 .toSortedList()
                 .flatten()
                 .branch{
-                    pattern_FC_PF_runid_acqid_chunkid: it.baseName ==~ pattern_FC_PF_runid_acqid_chunkid
+                    pattern_FC_PFS_runid_acqid_chunkid: it.baseName ==~ pattern_FC_PFS_runid_acqid_chunkid
+                    pattern_FC_runid_acqid_chunkid: it.baseName ==~ pattern_FC_runid_acqid_chunkid
                     no_pattern: true
                 }.set{signal_name_types}
             signal_name_types.no_pattern.first().subscribe { 
@@ -169,13 +180,20 @@ workflow ONT_BASECALL {
             }
 
             // Split the name keeping the flow cell, run, pass/fail and pod5 index.
-            signal_name_types.pattern_FC_PF_runid_acqid_chunkid
+            signal_name_types.pattern_FC_PFS_runid_acqid_chunkid
                 .map{filename -> 
                     fields = filename.baseName.split("_")
                     [fields[-1] as int, fields[0], fields[3], fields[1], filename]
                 }
+                .mix(
+                    signal_name_types.pattern_FC_runid_acqid_chunkid
+                    .map{filename -> 
+                        fields = filename.baseName.split("_")
+                        [fields[-1] as int, fields[0], fields[2], 'pass', filename]
+                    }
+                )
                 .map{ pod5_index, cell_id, run_id, pass, pod5 ->
-                    [Math.floor(pod5_index/params.basecaller_num_chunk_per_batch), cell_id, run_id, pass, pod5]
+                    [Math.floor(pod5_index/basecaller_batch_size), cell_id, run_id, pass, pod5]
                 }
                 .groupTuple(
                     by: [0, 1, 2, 3]
@@ -183,7 +201,7 @@ workflow ONT_BASECALL {
                 .map{pod5_index, cell_id, run_id, pass, pod5s -> pod5s}
                 .mix(
                     signal_name_types.no_pattern
-                        .buffer(size:params.basecaller_num_chunk_per_batch, remainder: true)
+                        .buffer(size:basecaller_batch_size, remainder: true)
                 )
                 .map { pod5s -> [chunk_idx++, pod5s] }
                 .set{ontSignalsBatches}
