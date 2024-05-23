@@ -12,6 +12,7 @@ process STRIP_KINETICS {
 
     script:
 
+        """
         primrose \
             -j $task.cpus \
             $bam \
