@@ -23,7 +23,34 @@ workflow {
                 params.sampleDirectory, params.sampleQCDirectory, params.qcToRun)
         }
         else if (params.sequencingPlatform.equalsIgnoreCase("ONT")) {
-            if (params.containsKey('ontReleaseData') && params.ontReleaseData) {
+            if (params.containsKey('ontBaseCall') && params.ontBaseCall) {
+                // --ontBaseCall true
+                // perform the basecalling
+                log.info("ONT workspace framework: perform re-basecall")
+                ONT_BASECALL()
+
+                if (params.containsKey('ontReleaseData') && params.ontReleaseData) {
+                    // PUBLISH_RELEASE(
+                    //     ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
+                    //     ONT_BASECALL.out.bam_md5sum, 
+                    //     params.sampleDirectory)
+                    def fundamentalQCs = params.qcToRun
+                    LONGREAD_QC(ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
+                        params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
+                } else {
+                    // all QCs: might be unnecessary
+                    // def fundamentalQCs = ['All']
+                    // all QCs: skip contamination until we handle insufficient coverage
+                    //          at least perform the samstat [error rate] and coverage [mean cov>=25]
+                    //          quality can be used for better estimates
+                    //          nanoplot can be used for trouble-shooting
+                    //          fingerprint - for additional identity trouble-shooting
+                    def fundamentalQCs = ['samtools_stats','coverage','quality','nanoplot','fingerprint']
+                    LONGREAD_QC(ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
+                        params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
+                }
+
+            } else if (params.containsKey('ontReleaseData') && params.ontReleaseData) {
                 // --ontReleaseData true
                 log.info("ONT workspace framework: release rebasecall data")
                 ONT_BACKUP_LIVEMODEL()
@@ -47,21 +74,6 @@ workflow {
                 PUBLISH_RELEASE_QC_ROOT(LONGREAD_QC.out.qcouts.flatten(), params.sampleQCDirectory)
                 PUBLISH_RELEASE_QC_NANAPLOT(LONGREAD_QC.out.nanoplotqcouts.flatten(), "${params.sampleQCDirectory}/nanoPlot")
                 
-            } else if (params.containsKey('ontBaseCall') && params.ontBaseCall) {
-                // --ontBaseCall true
-                // perform the basecalling
-                log.info("ONT workspace framework: perform re-basecall")
-                ONT_BASECALL()
-                // all QCs: might be unnecessary
-                // def fundamentalQCs = ['All']
-                // all QCs: skip contamination until we handle insufficient coverage
-                //          at least perform the samstat [error rate] and coverage [mean cov>=25]
-                //          quality can be used for better estimates
-                //          nanoplot can be used for trouble-shooting
-                //          fingerprint - for additional identity trouble-shooting
-                def fundamentalQCs = ['samtools_stats','coverage','quality','nanoplot','fingerprint']
-                LONGREAD_QC(ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
-                    params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
 
             } else if (params.containsKey('ontSetupBasecall') && params.ontSetupBasecall) {
                 // --ontSetupBasecall true
