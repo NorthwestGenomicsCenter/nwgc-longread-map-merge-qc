@@ -1,0 +1,68 @@
+##########################################
+### SAMPLE - start from ONT pod5 data to map-merge-qc (end-to-end)
+##########################################
+
+# User
+userId: "<samplify userId>"       # e.g. userid: "kolart"
+userEmail: "<userEmail>"          # e.g. userEmail: "kolart@uw.edu"
+
+# Sample
+sampleId: <samplify sampleId>     # e.g sampleId: 123456
+sampleDirectory: "<full path to sample directory>"
+                                  # e.g. sampleDirectory: "/net/nwgc/vol1/data/processed/samples/123456/WHOLE_GENOME"
+sampleQCDirectory: "<full path to sample QC directory>"
+                                  # usually, a subfolder "qc" under <sampleDirectory>
+                                  # e.g. sampleQCDirectory: "/net/nwgc/vol1/data/processed/samples/123456/WHOLE_GENOME/qc"
+
+# Sequencing
+sequencingPlatform: ONT           # "<name of sequencing platform (PacBio or ONT)"
+sequencerType: Promethion         # "<name of sequencer type (Sequel or Revio or Promethion)>"
+sequencingTarget: whole_genome    # "<name of sequencing target>"
+sequencingTargetBed: /net/nwgc/vol1/references/human/grc38/targets/WHOLE_GENOME/WHOLE_GENOME.grc38.bed
+                                  # "<full path to sequencing target bed file>"
+
+# Reference Genome
+referenceGenome: /net/nwgc/vol1/references/human/grc38/genome/pacbio/human_GRCh38_no_alt_analysis_set.fasta
+                                  # "<full path to reference genome fasta>"
+
+# Fingerprint Bed
+fingerprintBed: /net/nwgc/vol1/references/human/grc38/targets/fingerprint_grc38_aou.bed
+                                  # "<full path to fingerprint bed>"
+
+##########################################
+### DATA INPUT - for ont bam files
+##########################################
+
+# ONT bam Folders(for ONT)
+ontBamFolders:
+ -  "<full path to first folder that contains the bams>"
+ -  "<full path to second folder that contains the bamss>"
+ -  "<repeat for more folders>"
+# e.g.
+#ontBamFolders: 
+#  - "/net/nwgc/vol1/home/kolart/nextflow_ont_test/bams_1"
+#  - "/net/nwgc/vol1/home/kolart/nextflow_ont_test/bams_2"
+
+
+##########################################
+### DATA INPUT - automated SUP rebasecalling framework
+##########################################
+
+# to re-basecall the bam files from the signal files
+# production data is base-called with HAC model
+# ontRebasecall: <boolean to perform base call>
+ontRebasecall: true
+
+# submit the job for each ont run workspace created via ontRebasecall==true
+# you may still manual perform job submission with the .sh created via ontRebasecall==true
+# ontSubmitBaseCallJob: <boolean to submit run's re-basecall>
+ontSubmitBaseCallJob: true
+
+
+##########################################
+### RabbitMQ - do not set if non-NWGC sequencing data
+##########################################
+rabbitHost: ""				# <name of host for rabbitMQ>
+                      # e.g rabbitHost: "burnet"
+registration_url: ""		# <url to send rabbit message to>
+                        # e.g.registration_url: "http://burnet.gs.grid.washington.edu/samplify/RegisterPacBioMapMergeQCCompletion"
