@@ -1,0 +1,86 @@
+##########################################
+### SAMPLE - start from ONT pod5 data - using NWGC run-acquisition framework
+##########################################
+
+# User
+userId: "<samplify userId>"       # e.g. userid: "kolart"
+userEmail: "<userEmail>"          # e.g. userEmail: "kolart@uw.edu"
+
+# Sample
+sampleId: <samplify sampleId>     # e.g sampleId: 123456
+sampleDirectory: "<full path to sample directory>"
+                                  # e.g. sampleDirectory: "/net/nwgc/vol1/data/processed/samples/123456/WHOLE_GENOME"
+sampleQCDirectory: "<full path to sample QC directory>"
+                                  # usually, a subfolder "qc" under <sampleDirectory>
+                                  # e.g. sampleQCDirectory: "/net/nwgc/vol1/data/processed/samples/123456/WHOLE_GENOME/qc"
+
+# Sequencing
+sequencingPlatform: ONT           # "<name of sequencing platform (PacBio or ONT)"
+sequencerType: Promethion         # "<name of sequencer type (Sequel or Revio or Promethion)>"
+sequencingTarget: whole_genome    # "<name of sequencing target>"
+sequencingTargetBed: /net/nwgc/vol1/references/human/grc38/targets/WHOLE_GENOME/WHOLE_GENOME.grc38.bed
+                                  # "<full path to sequencing target bed file>"
+
+# Reference Genome
+referenceGenome: /net/nwgc/vol1/references/human/grc38/genome/pacbio/human_GRCh38_no_alt_analysis_set.fasta
+                                  # "<full path to reference genome fasta>"
+
+# Fingerprint Bed
+fingerprintBed: /net/nwgc/vol1/references/human/grc38/targets/fingerprint_grc38_aou.bed
+                                  # "<full path to fingerprint bed>"
+
+##########################################
+### DATA INPUT - for pod5 basecalling
+##########################################
+
+# perform base-calling
+ontBaseCall: true   # <boolean to perform base call>
+                    # e.g. ontBaseCall: true
+                    # e.g. ontBaseCall: false
+
+# ONT Fast5/Pod5Folders (for ONT)
+ontDataFolder: "<full path to the directory for ont data output>"
+                                  # usually the <run_process_work_folder>
+                                  # e.g. ontDataFolder: "/net/nwgc/vol1/home/kolart/nextflow_ont_test/ont"
+ontBaseCallModel: dna_r10.4.1_e8.2_400bps_sup@v4.2.0
+                                  # "<dorado model>" 
+                                  # e.g. ontBaseCallModel: "dna_r10.4.1_e8.2_400bps_sup@v4.2.0"
+                                  # e.g. ontBaseCallModel: "dna_r10.4.1_e8.2_400bps_sup@v3.5.2"
+                                  # e.g. ontBaseCallModel: "dna_r9.4.1_e8_sup@v3.3"
+ontBaseCallBaseModifications: 5mCG_5hmCG
+                                  # "<dorado base modifications>" 
+                                  # e.g. ontBaseCallBaseModifications: "5mCG_5hmCG"
+                                  # e.g. ontBaseCallBaseModifications: "5mCG"
+
+ontBaseCallOutFolder: "<full path to the directory for ont basecall output>" 
+                                  # usually the <run_process_work_folder>
+                                  # e.g. ontDataFolder: "/net/nwgc/vol1/home/kolart/nextflow_ont_test/ont/runacqid"
+
+
+# ONT Fast5/Pod5Folders (for ONT)
+# does not check for inconsistency
+ontSignalFolders:
+ -  "<full path to first folder that contains the pod5s>"
+ -  "<full path to second folder that contains the pod5s>"
+ -  "<repeat for more folders>"
+signalExtensions: pod5
+# example for fast5
+#ontSignalFolders: 
+#  - "/net/nwgc/vol1/home/kolart/nextflow_ont_test/fast5s_1"
+#  - "/net/nwgc/vol1/home/kolart/nextflow_ont_test/fast5s_2"
+#signalExtensions: fast5
+
+
+
+
+##########################################
+### RabbitMQ - 
+###            !!! IMPORTANT !!!
+###            do NOT set 
+###            Multiple run acquisitions may have been performed for a sample
+###            The sample qc metrics will get overwritten by a single run acquisition metrics!
+##########################################
+rabbitHost: ""				# <name of host for rabbitMQ>
+                      # e.g rabbitHost: "burnet"
+registration_url: ""		# <url to send rabbit message to>
+                        # e.g.registration_url: "http://burnet.gs.grid.washington.edu/samplify/RegisterPacBioMapMergeQCCompletion"
