@@ -35,14 +35,20 @@ process BASECALL_ONLY_DORADO {
     output:
         path("${params.sampleId}_${chunk_idx}.bam"), emit: uabams
         path("*.pod5"), emit: converted_pod5s, optional: true
+        path "versions.yaml", emit: versions
     script:
         // def cudaDevice = (null == params.ontCudaDevice) ? 'cuda:all' : params.ontCudaDevice
         def cudaDevice = (null == params.ontCudaDevice) ? 'cuda:${SGE_HGR_cuda}' : params.ontCudaDevice
         // TODO: decide if R9 or R10?
-        def model_arg = (null == basecaller_model) ? "\${MODELS_ROOT}/dna_r10.4.1_e8.2_400bps_sup@v3.5.2" : "${basecaller_model}"
-        def mods_arg = (null == basecaller_mods) ? '' : "--modified-bases ${basecaller_mods}"
-
+        def model_arg = ("" == basecaller_model) ? "\${MODELS_ROOT}/dna_r10.4.1_e8.2_400bps_sup@v3.5.2" : "${basecaller_model}"
+        def mods_arg = ("" == basecaller_mods) ? '' : "--modified-bases ${basecaller_mods}"
         def eff_signal_path = "."
+
+        def model_rec = model_arg
+        def model_bits = model_rec.split("/")
+        model_rec = model_bits[-1]
+        def mods_rec = ("" == basecaller_mods) ? 'none' : "${basecaller_mods}"
+
         """
             dorado basecaller \
                 --device ${cudaDevice} \
@@ -50,6 +56,13 @@ process BASECALL_ONLY_DORADO {
                 ${eff_signal_path} \
                 ${mods_arg} \
             > ${params.sampleId}_${chunk_idx}.bam
+
+            cat <<-END_VERSIONS > versions.yaml
+            '${task.process}':
+                dorado: \$(dorado --version 2>&1)
+                model: ${model_rec}
+                modifications: ${mods_rec}
+            END_VERSIONS
         """
 }
 
@@ -99,14 +112,15 @@ process COLLATE_DORADO_SUMMARIES {
 process QSFILTER {
     label "QSFILTER_${params.sampleId}_${params.userId}"
 
-    publishDir "${pass_folder}", mode: 'link', pattern: '*.pass.bam'
-    publishDir "${fail_folder}", mode: 'link', pattern: '*.fail.bam'
+    publishDir "${pass_folder}", mode: 'link', pattern: '*.pass.bam', enabled: "${toPublish}"
+    publishDir "${fail_folder}", mode: 'link', pattern: '*.fail.bam', enabled: "${toPublish}"
     
     input:
         path reads
         val(qscore_filter)
         val(pass_folder)
         val(fail_folder)
+        val(toPublish)
     output:
         path("${reads.baseName}.pass.bam"), emit: pass
         path("${reads.baseName}.fail.bam"), emit: fail
@@ -124,9 +138,15 @@ process QSFILTER {
 // DONE
 workflow ONT_BASECALL {
     main:
-        def finalMergedPath = "${params.ontBaseCallOutFolder}/mapped_pass_sup"
-        String runAcqID = new File("${params.ontBaseCallOutFolder}").name
-        def finalMergedFilePrefix = "${params.sampleId}.${runAcqID}"
+        def isReleaseMode = (params.containsKey('ontReleaseData') && params.ontReleaseData)
+        log.info("ONT_BASECALL isReleaseMode= ${isReleaseMode}")
+        def finalMergedPath = isReleaseMode ? 
+            "${params.sampleDirectory}" : "${params.ontBaseCallOutFolder}/mapped_pass_sup"
+        log.info("ONT_BASECALL finalMergedPath= ${finalMergedPath}")
+        String runAcqID = isReleaseMode ? 
+            ".${params.sequencingTarget}" : ("." + new File("${params.ontBaseCallOutFolder}").name)
+        def finalMergedFilePrefix = "${params.sampleId}${runAcqID}"
+        log.info("ONT_BASECALL finalMergedFilePrefix= ${finalMergedFilePrefix}")
         File finalMergedFileBam = new File("${finalMergedPath}/${finalMergedFilePrefix}.bam")
         File finalMergedFileBai = new File("${finalMergedPath}/${finalMergedFilePrefix}.bam.bai")
         File finalMergedFileMD5 = new File("${finalMergedPath}/${finalMergedFilePrefix}.bam.md5sum")
@@ -247,7 +267,8 @@ workflow ONT_BASECALL {
                 called_bams.uabams, 
                 params.basecall_qscore_filter, 
                 "${params.ontBaseCallOutFolder}/bam_pass_sup",
-                "${params.ontBaseCallOutFolder}/bam_fail_sup")
+                "${params.ontBaseCallOutFolder}/bam_fail_sup",
+                !isReleaseMode)
 
 
             // FIXME: collatedPassFailBAMs.fail can be useful for SVs detection!
@@ -266,6 +287,10 @@ workflow ONT_BASECALL {
 
             // Versions
             ch_versions = Channel.empty()
+            // TODO: WHAT's the difference of the next two lines?
+            ch_versions = ch_versions.mix(BASECALL_ONLY_DORADO.out.versions)
+            //ch_versions = ch_versions.mix(called_bams.out.versions)
+            ch_versions = ch_versions.mix(MAP_ONT_BAM.out.versions)
             ch_versions = ch_versions.mix(MAP_ONT_BAM.out.versions)
             ch_versions = ch_versions.mix(MERGE_MAPPED_BAMS.out.versions)
             ch_versions = ch_versions.mix(CHECKSUM_BAM.out.versions)
