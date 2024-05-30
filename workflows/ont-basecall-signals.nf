@@ -319,6 +319,10 @@ workflow ONT_SETUP_BASECALL_ENVIRONMENT {
         if (params.containsKey('ontSubmitBaseCallJob')) {
             ontSubmitBaseCallJob = params.ontSubmitBaseCallJob
         }
+        backendEmailReroute = false
+        if (params.containsKey('backendEmailReroute')) {
+            backendEmailReroute = params.backendEmailReroute
+        }
         def ontRunAcqs = Channel
             .fromList(params.ontBamFolders)
             .map{runAcqBam -> 
@@ -329,14 +333,14 @@ workflow ONT_SETUP_BASECALL_ENVIRONMENT {
                 by: [0]
             )
             .map{runAcqFolder, runAcqBams -> 
-                NwgcONTCore.setupRunAcquisition(runAcqFolder, runAcqBams, params.sampleId, ontDataFolder, ontSubmitBaseCallJob)
+                NwgcONTCore.setupRunAcquisition(runAcqFolder, runAcqBams, params.sampleId, ontDataFolder, ontSubmitBaseCallJob, backendEmailReroute)
             }
 
         // TODO: consider => write the release version of the file?
         ontRunAcqs
             .toList()
             .subscribe {
-                NwgcONTCore.setupRelease(it, params.sampleId, ontDataFolder, outPrefix)
+                NwgcONTCore.setupRelease(it, params.sampleId, ontDataFolder, outPrefix, backendEmailReroute)
             }
 }
 
