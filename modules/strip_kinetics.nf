@@ -24,13 +24,13 @@ process STRIP_KINETICS {
         if samtools view -H $bam | grep ^@PG | grep ID:primrose | grep -q keep-kinetics; then PRIMROSE_KEPT_KINETECS=true; fi
 
         RUN_PRIMROSE=false
-        if [[ "\$JASMINE_WAS_RUN" = true ]]; then
+        if [[ "\$JASMINE_WAS_RUN" = true ]] ; then
             if [[ "\$JASMINE_KEPT_KINETECS" = true ]] ; then
                 RUN_PRIMROSE=true
             else
                 echo "Jasmine already ran and removed kinetics"
             fi
-        elif  [[ "\$PRIMROSE_WAS_RUN" = true ]] ;; then
+        elif  [[ "\$PRIMROSE_WAS_RUN" = true ]] ; then
             if [[ "\$PRIMROSE_KEPT_KINETECS" = true ]] ; then
                 RUN_PRIMROSE=true
             else
