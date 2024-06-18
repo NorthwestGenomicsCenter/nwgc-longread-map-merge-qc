@@ -13,10 +13,22 @@ process STRIP_KINETICS {
     script:
 
         """
-        primrose \
-            -j $task.cpus \
-            $bam \
-            ${bam}.primrose.bam;
+        METHYLATION_PREDICTION_WAS_RUN=true
+        if ! samtools view -H $bam | grep ^@PG | grep -q ID:jasmine ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
+        if ! samtools view -H $bam | grep ^@PG | grep -q ID:primrose ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
+
+        METHYLATION_PREDICTION_KEPT_KINETECS=false
+        if samtools view -H $bam | grep ^@PG | grep ID:jasmine | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
+        if samtools view -H $bam | grep ^@PG | grep ID:primrose | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
+
+        if [[ "\$METHYLATION_PREDICTION_WAS_RUN" = false || "\$METHYLATION_PREDICTION_KEPT_KINETECS" = true ]] ; then
+            primrose \
+                -j $task.cpus \
+                $bam \
+                ${bam}.primrose.bam;
+        else
+            ln $bam ${bam}.primrose.bam;
+        fi
 
         samtools \
             index \
