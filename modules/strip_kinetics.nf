@@ -13,15 +13,35 @@ process STRIP_KINETICS {
     script:
 
         """
-        METHYLATION_PREDICTION_WAS_RUN=true
-        if ! samtools view -H $bam | grep ^@PG | grep -q ID:jasmine ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
-        if ! samtools view -H $bam | grep ^@PG | grep -q ID:primrose ; then METHYLATION_PREDICTION_WAS_RUN=false; fi
+        JASMINE_WAS_RUN=false
+        if samtools view -H $bam | grep ^@PG | grep -q ID:jasmine ; then JASMINE_WAS_RUN=true; fi
+        JASMINE_KEPT_KINETECS=false
+        if samtools view -H $bam | grep ^@PG | grep ID:jasmine | grep -q keep-kinetics; then JASMINE_KEPT_KINETECS=true; fi
 
-        METHYLATION_PREDICTION_KEPT_KINETECS=false
-        if samtools view -H $bam | grep ^@PG | grep ID:jasmine | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
-        if samtools view -H $bam | grep ^@PG | grep ID:primrose | grep -q keep-kinetics; then METHYLATION_PREDICTION_KEPT_KINETECS=true; fi
+        PRIMROSE_WAS_RUN=false
+        if samtools view -H $bam | grep ^@PG | grep -q ID:primrose ; then PRIMROSE_WAS_RUN=true; fi
+        PRIMROSE_KEPT_KINETECS=false
+        if samtools view -H $bam | grep ^@PG | grep ID:primrose | grep -q keep-kinetics; then PRIMROSE_KEPT_KINETECS=true; fi
 
-        if [[ "\$METHYLATION_PREDICTION_WAS_RUN" = false || "\$METHYLATION_PREDICTION_KEPT_KINETECS" = true ]] ; then
+        RUN_PRIMROSE=false
+        if [[ "\$JASMINE_WAS_RUN" = true ]]; then
+            if [[ "\$JASMINE_KEPT_KINETECS" = true ]] ; then
+                RUN_PRIMROSE=true
+            else
+                echo "Jasmine already ran and removed kinetics"
+            fi
+        else if  [[ "\$PRIMROSE_WAS_RUN" = true ]] ;; then
+            if [[ "\$PRIMROSE_KEPT_KINETECS" = true ]] ; then
+                RUN_PRIMROSE=true
+            else
+                echo "Primrose already ran and removed kinetics"
+            fi
+        else 
+            echo "Neither Jasmine or Primrose has run"
+            RUN_PRIMROSE=true
+        fi
+            
+        if [[ "\$RUN_PRIMROSE" = true ]] ; then
             primrose \
                 -j $task.cpus \
                 $bam \
