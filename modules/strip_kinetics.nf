@@ -30,7 +30,7 @@ process STRIP_KINETICS {
             else
                 echo "Jasmine already ran and removed kinetics"
             fi
-        else if  [[ "\$PRIMROSE_WAS_RUN" = true ]] ;; then
+        elif  [[ "\$PRIMROSE_WAS_RUN" = true ]] ;; then
             if [[ "\$PRIMROSE_KEPT_KINETECS" = true ]] ; then
                 RUN_PRIMROSE=true
             else
