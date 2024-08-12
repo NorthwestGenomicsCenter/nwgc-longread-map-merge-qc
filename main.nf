@@ -46,6 +46,9 @@ workflow {
                     //          nanoplot can be used for trouble-shooting
                     //          fingerprint - for additional identity trouble-shooting
                     def fundamentalQCs = ['samtools_stats','coverage','quality','nanoplot','fingerprint']
+                    if (params.containsKey('qcToRun')) {
+                        fundamentalQCs = params.qcToRun
+                    }
                     LONGREAD_QC(ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
                         params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
                 }
