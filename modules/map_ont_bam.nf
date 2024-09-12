@@ -25,7 +25,7 @@ process MAP_ONT_BAM {
             -t ${task.cpus} \\
             --MD \\
             -y \\
-            -R "\$(samtools view -H $bam | grep ^@RG | sed 's/\\t/\\\\t/g')" \\
+            -R "\$(samtools view -H $bam | grep ^@RG | sed -r 's/\\tSM:[ -~]+/\\tSM:${params.sampleId}/g; s/\\t/\\\\t/g')" \\
             $params.referenceGenome \\
             - \\
         | \\
