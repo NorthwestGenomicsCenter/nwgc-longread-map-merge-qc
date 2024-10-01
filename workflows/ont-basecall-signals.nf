@@ -349,9 +349,9 @@ workflow ONT_SETUP_BASECALL_ENVIRONMENT {
 process PUBLISH_RELEASE {
     label "PUBLISH_RELEASE_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'copy', pattern: "${bam}"
-    publishDir "${qcFolder}", mode: 'copy', pattern: "${bai}"
-    publishDir "${qcFolder}", mode: 'copy', pattern: "${md5sum}"
+    publishDir "${pubdir}", mode: 'copy', pattern: "${bam}"
+    publishDir "${pubdir}", mode: 'copy', pattern: "${bai}"
+    publishDir "${pubdir}", mode: 'copy', pattern: "${md5sum}"
 
     input:
         file bam
