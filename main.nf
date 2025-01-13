@@ -13,7 +13,6 @@ include { ONT_MAP_MERGE_BAMS } from './workflows/ont-map-merge-bams.nf'
 include { LONGREAD_QC } from './workflows/qc.nf'
 
 workflow {
-    NwgcCore.init(params)
 
     // Map-Merge
     if (params.mergedBam == null) {
@@ -135,17 +134,5 @@ workflow {
     }
     else {
         LONGREAD_QC(params.mergedBam, "${params.mergedBam}.bai", params.sampleDirectory, params.sampleQCDirectory, params.qcToRun)
-    }
-}
-
-workflow.onError {
-    if (params.containsKey('rabbitHost') && params.rabbitHost!="") {
-        NwgcCore.error(workflow, "$params.sampleId")
-    }
-}
-
-workflow.onComplete {
-    if (params.containsKey('rabbitHost') && params.rabbitHost!="") {
-        NwgcCore.processComplete(workflow, "$params.sampleId")
     }
 }

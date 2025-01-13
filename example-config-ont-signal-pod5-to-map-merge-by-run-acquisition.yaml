@@ -70,17 +70,3 @@ signalExtensions: pod5
 #  - "/net/nwgc/vol1/home/kolart/nextflow_ont_test/fast5s_2"
 #signalExtensions: fast5
 
-
-
-
-##########################################
-### RabbitMQ - 
-###            !!! IMPORTANT !!!
-###            do NOT set 
-###            Multiple run acquisitions may have been performed for a sample
-###            The sample qc metrics will get overwritten by a single run acquisition metrics!
-##########################################
-rabbitHost: ""				# <name of host for rabbitMQ>
-                      # e.g rabbitHost: "burnet"
-registration_url: ""		# <url to send rabbit message to>
-                        # e.g.registration_url: "http://burnet.gs.grid.washington.edu/samplify/RegisterPacBioMapMergeQCCompletion"
