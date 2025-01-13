@@ -70,14 +70,3 @@ signalExtensions: pod5
 #  - "/net/nwgc/vol1/home/kolart/nextflow_ont_test/fast5s_2"
 #signalExtensions: fast5
 ontReleaseData: true
-
-
-
-
-##########################################
-### RabbitMQ - do not set if non-NWGC sequencing data
-##########################################
-rabbitHost: ""				# <name of host for rabbitMQ>
-                      # e.g rabbitHost: "burnet"
-registration_url: ""		# <url to send rabbit message to>
-                        # e.g.registration_url: "http://burnet.gs.grid.washington.edu/samplify/RegisterPacBioMapMergeQCCompletion"
