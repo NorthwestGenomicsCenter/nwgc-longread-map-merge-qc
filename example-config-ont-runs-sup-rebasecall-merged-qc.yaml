@@ -60,13 +60,3 @@ ontBamFolders:
 # ontReleaseData: false
 ontReleaseData: true
 
-
-##########################################
-### RabbitMQ - do not set if non-NWGC sequencing data
-###            should be set for Samplify to pick up the SUP metrics
-###            from <sampleid>/longread-map-merge-qc/qc
-##########################################
-rabbitHost: ""				# <name of host for rabbitMQ>
-                      # e.g rabbitHost: "burnet"
-registration_url: ""		# <url to send rabbit message to>
-                        # e.g.registration_url: "http://burnet.gs.grid.washington.edu/samplify/RegisterPacBioMapMergeQCCompletion"

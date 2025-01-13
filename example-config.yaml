@@ -107,10 +107,3 @@ ontBaseCall: <boolean to perform base call> # e.g. ontBaseCall: true
 
 # mergedBam (for running qc on an already existing merged bam)
 mergedBam: "<full path to a merged bam that contains nm tags>"  # e.g.  mergedBam: /net/nwgc/vol1/home/kolart/pacbio_merged_test.bam   
-
-
-##########################################
-### RabbitMQ
-##########################################
-rabbitHost: "<name of host for rabbitMQ>"				#e.g rabbitHost: "burnet"
-registration_url: "<url to send rabbit message to>"		#e.g.registration_url: "http://burnet.gs.grid.washington.edu/samplify/RegisterPacBioMapMergeQCCompletion"
