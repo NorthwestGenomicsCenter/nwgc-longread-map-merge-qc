@@ -2,20 +2,25 @@ process CHECKSUM_BAM {
 
     label "CHECKSUM_BAM_${params.sampleId}_${params.userId}"
 
-    publishDir "${checksumPath}", mode:  'link', pattern: "${inputBam}.md5sum"
+    publishDir "${checksumPath}", mode:  'link', pattern: "${bam}.md5sum"
+    publishDir "${checksumPath}", mode:  'link', pattern: "${bai}.md5sum"
 
     input:
-        path inputBam
+        path bam
+        path bai
         val(checksumPath)
 
     output:
-        path "${inputBam}", emit: bam
-        path "${inputBam}.md5sum", emit: md5sum
+        path "${bam}", emit: bam
+        path "${bam}.md5sum", emit: md5sum
+        path "${bai}", emit: bam
+        path "${bai}.md5sum", emit: md5sum
         path "versions.yaml", emit: versions
 
     script:
         """
-        md5sum $inputBam | awk '{print \$1}' > ${inputBam}.md5sum
+        md5sum $bam | awk '{print \$1}' > ${bam}.md5sum
+        md5sum $bai | awk '{print \$1}' > ${bai}.md5sum
 
         cat <<-END_VERSIONS > versions.yaml
         '${task.process}':

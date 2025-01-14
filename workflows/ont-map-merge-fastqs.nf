@@ -18,7 +18,7 @@ workflow ONT_MAP_MERGE_FASTQS {
         MERGE_MAPPED_BAMS(MAP_ONT_FASTQ.out.mapped_bam.collect(), outFolder, outPrefix)
 
         // checksum
-        CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, outFolder)
+        CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, MERGE_MAPPED_BAMS.out.bai,  outFolder)
 
         // Versions
         ch_versions = Channel.empty()
