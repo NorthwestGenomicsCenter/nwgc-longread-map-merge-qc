@@ -2,7 +2,9 @@ process CONTAMINATION_CHECK {
 
     label "CONTAMINATION_CHECK_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.VerifyBamID.selfSM'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.VerifyBamID.selfSM', overwrite: true
 
     input:
         path bam

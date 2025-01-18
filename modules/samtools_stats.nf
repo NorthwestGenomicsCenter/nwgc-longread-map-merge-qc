@@ -2,7 +2,9 @@ process SAMTOOLS_STATS {
 
     label "SAMTOOLS_STATS_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.stats.txt'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.stats.txt', overwrite: true
 
     input:
         path bam

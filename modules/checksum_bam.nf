@@ -2,8 +2,10 @@ process CHECKSUM_BAM {
 
     label "CHECKSUM_BAM_${params.sampleId}_${params.userId}"
 
-    publishDir "${checksumPath}", mode:  'link', pattern: "${bam}.md5sum"
-    publishDir "${checksumPath}", mode:  'link', pattern: "${bai}.md5sum"
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${checksumPath}", mode: 'link', pattern: "${bam}.md5sum", overwrite: true
+    publishDir "${checksumPath}", mode: 'link', pattern: "${bai}.md5sum", overwrite: true
 
     input:
         path bam
@@ -12,9 +14,9 @@ process CHECKSUM_BAM {
 
     output:
         path "${bam}", emit: bam
-        path "${bam}.md5sum", emit: md5sum
-        path "${bai}", emit: bam
-        path "${bai}.md5sum", emit: md5sum
+        path "${bam}.md5sum", emit: bammd5sum
+        path "${bai}", emit: bai
+        path "${bai}.md5sum", emit: baimd5sum
         path "versions.yaml", emit: versions
 
     script:

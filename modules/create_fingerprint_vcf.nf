@@ -2,8 +2,10 @@ process CREATE_FINGERPRINT_VCF {
 
     label "CREATE_FINGERPRINT_VCF_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.fingerprint.vcf.gz'
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.fingerprint.vcf.gz.tbi'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.fingerprint.vcf.gz', overwrite: true
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.fingerprint.vcf.gz.tbi', overwrite: true
  
     input:
         path bam

@@ -29,10 +29,6 @@ workflow {
                 ONT_BASECALL()
 
                 if (params.containsKey('ontReleaseData') && params.ontReleaseData) {
-                    // PUBLISH_RELEASE(
-                    //     ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
-                    //     ONT_BASECALL.out.bam_md5sum, 
-                    //     params.sampleDirectory)
                     def fundamentalQCs = params.qcToRun
                     LONGREAD_QC(ONT_BASECALL.out.bam, ONT_BASECALL.out.bai, 
                         params.sampleDirectory, params.sampleQCDirectory, fundamentalQCs)
@@ -57,10 +53,12 @@ workflow {
                 log.info("ONT workspace framework: release rebasecall data")
                 ONT_BACKUP_LIVEMODEL()
                 ONT_MERGE_QC_SUP_BAMS()
+                /*
                 PUBLISH_RELEASE(
                     ONT_MERGE_QC_SUP_BAMS.out.bam, ONT_MERGE_QC_SUP_BAMS.out.bai, 
-                    ONT_MERGE_QC_SUP_BAMS.out.bam_md5sum, 
+                    ONT_MERGE_QC_SUP_BAMS.out.bam_md5sum, ONT_MERGE_QC_SUP_BAMS.out.bai_md5sum, 
                     params.sampleDirectory)
+                    */
 
                 // where to write qc
                 ontDataFolder = NwgcONTCore.getONTDataFolder(params)
@@ -72,9 +70,13 @@ workflow {
                 //// FIXME: commented out for speed testing
                 //// def fundamentalQCs = ['samtools_stats','quality','nanoplot','fingerprint']
                 LONGREAD_QC(ONT_MERGE_QC_SUP_BAMS.out.bam, ONT_MERGE_QC_SUP_BAMS.out.bai, 
-                    params.sampleDirectory, releaseLiveModelQCFolder, fundamentalQCs)
+                    //params.sampleDirectory, releaseLiveModelQCFolder, 
+                    params.sampleDirectory, params.sampleQCDirectory, 
+                    fundamentalQCs)
+                /*
                 PUBLISH_RELEASE_QC_ROOT(LONGREAD_QC.out.qcouts.flatten(), params.sampleQCDirectory)
                 PUBLISH_RELEASE_QC_NANAPLOT(LONGREAD_QC.out.nanoplotqcouts.flatten(), "${params.sampleQCDirectory}/nanoPlot")
+                */
                 
 
             } else if (params.containsKey('ontSetupBasecall') && params.ontSetupBasecall) {
@@ -95,13 +97,16 @@ workflow {
                 ONT_SETUP_BASECALL_ENVIRONMENT()
 
                 ONT_MAP_MERGE_BAMS([
-                    "outFolder": "${releaseLiveModelFolder}"
+                    //"outFolder": "${releaseLiveModelFolder}"
+                    "outFolder": "${params.sampleDirectory}"
                     , "outPrefix": "${params.sampleId}.${params.sequencingTarget}"
                     ])
+                /*
                 PUBLISH_RELEASE(
                     ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                    ONT_MAP_MERGE_BAMS.out.bam_md5sum, 
+                    ONT_MAP_MERGE_BAMS.out.bam_md5sum, ONT_MAP_MERGE_BAMS.out.bai_md5sum, 
                     params.sampleDirectory)
+                    */
 
                 releaseLiveModelQCFolder = NwgcONTCore.getReleaseLiveModelQCFolder(ontDataFolder)
                 log.info("releaseLiveModelQCFolder = ${releaseLiveModelQCFolder}")
@@ -110,9 +115,13 @@ workflow {
                 ////FIXME: commented out for speed testing
                 //// def fundamentalQCs = ['samtools_stats','quality','nanoplot','fingerprint']
                 LONGREAD_QC(ONT_MAP_MERGE_BAMS.out.bam, ONT_MAP_MERGE_BAMS.out.bai, 
-                    releaseLiveModelFolder, releaseLiveModelQCFolder, fundamentalQCs)
+                    // releaseLiveModelFolder, releaseLiveModelQCFolder, 
+                    params.sampleDirectory, params.sampleQCDirectory, 
+                    fundamentalQCs)
+                /*
                 PUBLISH_RELEASE_QC_ROOT(LONGREAD_QC.out.qcouts.flatten(), params.sampleQCDirectory)
                 PUBLISH_RELEASE_QC_NANAPLOT(LONGREAD_QC.out.nanoplotqcouts.flatten(), "${params.sampleQCDirectory}/nanoPlot")
+                */
             } else {
                 // equivalent: --no_ontReleaseData --no_ontBaseCall --no_ontSetupBasecall --no_ontRebasecall
                 // this is the environment from <= v1.7.0

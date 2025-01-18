@@ -4,7 +4,9 @@ process PICARD_COVERAGE_METRICS {
 
     Boolean isOnt = params.sequencingPlatform.equalsIgnoreCase("ont")
 
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.picard.coverage.txt'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.picard.coverage.txt', overwrite: true
  
     input:
         path bam

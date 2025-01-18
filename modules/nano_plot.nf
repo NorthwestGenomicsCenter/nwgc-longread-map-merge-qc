@@ -2,9 +2,11 @@ process NANO_PLOT {
 
     label "NANO_PLOT_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'link', pattern: 'nanoPlot/*.html'
-    publishDir "${qcFolder}", mode: 'link', pattern: 'nanoPlot/*.png'
-    publishDir "${qcFolder}", mode: 'link', pattern: 'nanoPlot/NanoStats.txt'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: 'nanoPlot/*.html', overwrite: true
+    publishDir "${qcFolder}", mode: 'link', pattern: 'nanoPlot/*.png', overwrite: true
+    publishDir "${qcFolder}", mode: 'link', pattern: 'nanoPlot/NanoStats.txt', overwrite: true
  
     input:
         path bam

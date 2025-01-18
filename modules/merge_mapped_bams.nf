@@ -3,8 +3,10 @@ process MERGE_MAPPED_BAMS {
 
     label "MERGE_MAPPED_BAMS_${params.sampleId}_${params.userId}"
 
-    publishDir "${mergedPath}", mode:  'link', pattern: "${saveAsPrefix}.bam"
-    publishDir "${mergedPath}", mode:  'link', pattern: "${saveAsPrefix}.bam.bai"
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${mergedPath}", mode: 'link', pattern: "${saveAsPrefix}.bam", overwrite: true
+    publishDir "${mergedPath}", mode: 'link', pattern: "${saveAsPrefix}.bam.bai", overwrite: true
 
     input:
         path bamList

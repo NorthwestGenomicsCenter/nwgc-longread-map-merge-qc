@@ -283,7 +283,7 @@ workflow ONT_BASECALL {
                 finalMergedFilePrefix)
 
             // checksum
-            CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, finalMergedPath)
+            CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, MERGE_MAPPED_BAMS.out.bai, finalMergedPath)
 
             // Versions
             ch_versions = Channel.empty()
@@ -305,7 +305,8 @@ workflow ONT_BASECALL {
         // from second phase
         bam = MERGE_MAPPED_BAMS.out.merged_sorted_bam
         bai = MERGE_MAPPED_BAMS.out.bai
-        bam_md5sum = CHECKSUM_BAM.out.md5sum
+        bam_md5sum = CHECKSUM_BAM.out.bammd5sum
+        bai_md5sum = CHECKSUM_BAM.out.baimd5sum
 }
 
 // DONE
@@ -333,14 +334,14 @@ workflow ONT_SETUP_BASECALL_ENVIRONMENT {
                 by: [0]
             )
             .map{runAcqFolder, runAcqBams -> 
-                NwgcONTCore.setupRunAcquisition(runAcqFolder, runAcqBams, params.sampleId, ontDataFolder, ontSubmitBaseCallJob, backendEmailReroute)
+                NwgcONTCore.setupRunAcquisition(runAcqFolder, runAcqBams, params.sampleId, params.sampleDirectory, ontDataFolder, ontSubmitBaseCallJob, backendEmailReroute)
             }
 
         // TODO: consider => write the release version of the file?
         ontRunAcqs
             .toList()
             .subscribe {
-                NwgcONTCore.setupRelease(it, params.sampleId, ontDataFolder, outPrefix, backendEmailReroute)
+                NwgcONTCore.setupRelease(it, params.sampleId, params.sampleDirectory, ontDataFolder, outPrefix, backendEmailReroute)
             }
 }
 
@@ -351,22 +352,26 @@ process PUBLISH_RELEASE {
 
     publishDir "${pubdir}", mode: 'copy', pattern: "${bam}"
     publishDir "${pubdir}", mode: 'copy', pattern: "${bai}"
-    publishDir "${pubdir}", mode: 'copy', pattern: "${md5sum}"
+    publishDir "${pubdir}", mode: 'copy', pattern: "${bammd5sum}"
+    publishDir "${pubdir}", mode: 'copy', pattern: "${baimd5sum}"
 
     input:
         file bam
         file bai
-        file md5sum
+        file bammd5sum
+        file baimd5sum
         val pubdir
     output:
         file bam
         file bai
-        file md5sum
+        file bammd5sum
+        file baimd5sum
     script:
     """
     echo ${bam}
     echo ${bai}
-    echo ${md5sum}
+    echo ${bammd5sum}
+    echo ${baimd5sum}
     echo ${pubdir}
     """
 }
@@ -404,7 +409,8 @@ workflow ONT_MERGE_QC_SUP_BAMS {
         NwgcONTCore.setWorkflowMetadata(workflow)
         // rehash the release bam files from SUP specific directories
         ontDataFolder = NwgcONTCore.getONTDataFolder(params)
-        outFolder = NwgcONTCore.getReleaseSupFolder(ontDataFolder)
+        //outFolder = NwgcONTCore.getReleaseSupFolder(ontDataFolder)
+        outFolder = "${params.sampleDirectory}"
         outPrefix = NwgcONTCore.getReleaseSupPrefix(params)
 
         def ontBams = Channel.empty()
@@ -451,7 +457,7 @@ workflow ONT_MERGE_QC_SUP_BAMS {
         MERGE_MAPPED_BAMS(ontBamsBinned.present.flatten().unique().collect(), outFolder, outPrefix)
 
         // checksum
-        CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, outFolder)
+        CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, MERGE_MAPPED_BAMS.out.bai, outFolder)
 
         // TODO: copy? hardlink? 
 
@@ -465,6 +471,7 @@ workflow ONT_MERGE_QC_SUP_BAMS {
     emit:
         bam = MERGE_MAPPED_BAMS.out.merged_sorted_bam
         bai = MERGE_MAPPED_BAMS.out.bai
-        bam_md5sum = CHECKSUM_BAM.out.md5sum
+        bam_md5sum = CHECKSUM_BAM.out.bammd5sum
+        bai_md5sum = CHECKSUM_BAM.out.baimd5sum
         outFolder = outFolder
 }

@@ -2,9 +2,11 @@ process MOSDEPTH {
 
     label "MOSDEPTH_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.mosdepth.summary.txt'
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.thresholds.bed.gz'
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.thresholds.bed.gz.csi'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.mosdepth.summary.txt', overwrite: true
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.thresholds.bed.gz', overwrite: true
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.thresholds.bed.gz.csi', overwrite: true
  
     input:
         path bam

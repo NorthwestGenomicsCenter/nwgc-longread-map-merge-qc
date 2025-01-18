@@ -2,7 +2,9 @@ process PICARD_QUALITY_METRICS {
 
     label "PICARD_QUALITY_METRICS_${params.sampleId}_${params.userId}"
 
-    publishDir "${qcFolder}", mode: 'link', pattern: '*.picard.quality.txt'
+    // For simplicity, ONT's merge_HAC and merge_SUP publish to the same sample directory
+    // Thus, overwrite is allowed
+    publishDir "${qcFolder}", mode: 'link', pattern: '*.picard.quality.txt', overwrite: true
  
     input:
         path bam

@@ -27,6 +27,7 @@ class NwgcONTCore {
     final private static String RELEASE_LIVEMODEL_FOLDER = 'map-merge-qc_livemodel'
     final private static String ONT_BACKEND_USERID = 'cheehong'
     final private static String ONT_BACKEND_USEREMAIL = 'cheehong@uw.edu'
+    final private static String MODULE_NEXTFLOW_VERSION = 'nextflow/23.10.1'
     final private static Map FlowCellModels = [
         'FLO-PRO002@4000': ['supmodel': 'dna_r9.4.1_e8_sup@v3.3', 'modifications': '5mCG'], 
         'FLO-PRO114M@4000': ['supmodel': 'dna_r10.4.1_e8.2_400bps_sup@v3.5.2', 'modifications': '5mCG'],
@@ -78,7 +79,8 @@ class NwgcONTCore {
         for(int i=0; i<commandTokens.length ; i++) {
             if (commandTokens[i].equals("-params-file")) {
                 if ((i+1)<commandTokens.length) {
-                    paramFile = commandTokens[i+1]
+                    File templateFPN = new File(commandTokens[i+1])
+                    paramFile = templateFPN.getName()
                 }
                 break;
             }
@@ -155,6 +157,8 @@ class NwgcONTCore {
         def writer = derivativeFile.newWriter()
 
         boolean notesWritten = false
+        boolean nxfuuidWritten = false
+        boolean workingDirWritten = false
         templateFile.eachLine {
             line -> 
             if (line.startsWith("#!")) {
@@ -199,6 +203,28 @@ class NwgcONTCore {
                     writer.writeLine "JOB_NAME=basecall_${sampleId}_${runAcqID}"
                 } else if (line.startsWith("USER_EMAIL=") && backendEmailReroute) { // for nextflow framework
                     writer.writeLine "USER_EMAIL=${ONT_BACKEND_USEREMAIL}"
+                } else if (line.equals("module load nextflow/22.10.7")) { // module load nextflow/22.10.7 - unavailable!
+                    writer.writeLine "module load ${MODULE_NEXTFLOW_VERSION}"
+                } else if (line.startsWith("export NXF_UUID=")) { // should have a new session id for samplify database
+                    def uuid = UUID.randomUUID()
+                    writer.writeLine "export NXF_UUID=${uuid}"
+                    nxfuuidWritten = true
+                } else if (line.startsWith('cd ${PUBLISH_DIR}')) { // cd ${PUBLISH_DIR}
+                    // use the working directory per launchify
+                    writer.writeLine 'cd ${WORKING_DIR}'
+                    workingDirWritten = true
+                } else if (line.startsWith("nextflow ")) { // nextflow run ...
+                    if (!nxfuuidWritten) {
+                        def uuid = UUID.randomUUID()
+                        writer.writeLine "export NXF_UUID=${uuid}"
+                        nxfuuidWritten = true
+                    }
+                    if (!workingDirWritten) {
+                        writer.writeLine 'mkdir -p ${WORKING_DIR}'
+                        writer.writeLine 'cd ${WORKING_DIR}'
+                        workingDirWritten = true
+                    }
+                    writer.writeLine "${line}"
                 } else { // pass-thru
                     writer.writeLine "${line}"
                 }
@@ -233,7 +259,7 @@ class NwgcONTCore {
             String content = templateFile.text
             final yaml = (Map)new Yaml().load(content)
 
-            // sanity: retricted to basecalling only, no release of data!
+            // sanity: restricted to basecalling only, no release of data!
             if (yaml.containsKey('ontReleaseData')) {
                 if (yaml['ontReleaseData']) {
                     yaml.remove('ontReleaseData')
@@ -307,7 +333,7 @@ class NwgcONTCore {
             if (yaml.containsKey('ontBaseCallBaseModifications')) {
                 //if (FlowCellModels.containsKey(settings.runacq.FlowCellProductCode)) {
                     String value = FlowCellModels[settings.runacq.FlowCellProductCode]['modifications'];
-                    if (!yaml['ontBaseCallModel'].equals(value)) {
+                    if (!yaml['ontBaseCallBaseModifications'].equals(value)) {
                         log.warn("Specified base modifications '${yaml.ontBaseCallBaseModifications}' differs from expected '${value}'")
                         log.warn("NOT overriding; effective basecall model = '${yaml.ontBaseCallBaseModifications}'")
                     }
@@ -488,7 +514,7 @@ class NwgcONTCore {
         return meta
     }
 
-    public static Map setupRunAcquisition(runAcquisitionPath, runAcqBamFolders, sampleId, ontDataFolder, ontSubmitBaseCallJob=true, backendEmailReroute=false) {
+    public static Map setupRunAcquisition(runAcquisitionPath, runAcqBamFolders, sampleId, sampleDirectory, ontDataFolder, ontSubmitBaseCallJob=true, backendEmailReroute=false) {
         /*
             set up the folder if not existing
             set up the subfolder for pod5_{pass,fail} hardlink if exists, else fast5_{pass,fail}
@@ -655,7 +681,7 @@ class NwgcONTCore {
         def basecallScript = getONTWorkspaceFolder(ontDataFolder, runAcqID, BASECALL_BASH_SCRIPT)
         results['basecall']['script'] = basecallScript;
 
-        def paramFileFPN = getParamFile(wfMeta.launchDir, wfMeta.commandLine)
+        def paramFileFPN = getParamFile(sampleDirectory, wfMeta.commandLine)
         File paramFileUsed = new File(paramFileFPN)
         def basecallParamFile = getONTWorkspaceFolder(ontDataFolder, runAcqID, paramFileUsed.getName())
         results['basecall']['params'] = basecallParamFile
@@ -689,12 +715,26 @@ class NwgcONTCore {
             }
         }
 
-        if (newSetup>0 || 0==totalSetup) {
+        boolean toSetupScriptAndParameters = false
+        if (totalSetup>0) {
+            File file = new File(basecallScript)
+            if (!file.exists()) {
+                if (log!=null) { log.info("${totalSetup} data files detected but the script is missing. To create script.") }
+                toSetupScriptAndParameters = true
+            }
+            file = new File(basecallParamFile)
+            if (!file.exists()) {
+                if (log!=null) { log.info("${totalSetup} data files detected but the parameter file is missing. To create parameter file.") }
+                toSetupScriptAndParameters = true
+            }
+        }
+
+        if (newSetup>0 || toSetupScriptAndParameters) {
             // results['bamPass']['source'] results['bamFail']['source']
 
             setupBasecallBashScript(
-                "${wfMeta.launchDir}/${PARENT_BASH_SCRIPT}", 
-                basecallScript, sampleId, ontDataFolder, runAcqID, totalSetup, paramFileUsed.getName(), results['runMeta'], backendEmailReroute)
+                "${sampleDirectory}/${PARENT_BASH_SCRIPT}", 
+                basecallScript, sampleId, ontDataFolder, runAcqID, totalSetup, basecallParamFile, results['runMeta'], backendEmailReroute)
 
             setupSUPBasecallParamsYAML(
                 paramFileFPN, 
@@ -753,6 +793,8 @@ class NwgcONTCore {
         def writer = derivativeFile.newWriter()
 
         boolean notesWritten = false
+        boolean nxfuuidWritten = false
+        boolean workingDirWritten = false
         templateFile.eachLine {
             line -> 
             if (line.startsWith("#!")) {
@@ -802,6 +844,28 @@ class NwgcONTCore {
                 } else if (line.startsWith("module load ") && -1!=line.indexOf("modules-init")) {
                     writer.writeLine "${line}"
                     writer.writeLine "module load samtools/1.17"
+                } else if (line.equals("module load nextflow/22.10.7")) { // module load nextflow/22.10.7 - unavailable!
+                    writer.writeLine "module load ${MODULE_NEXTFLOW_VERSION}"
+                } else if (line.startsWith("export NXF_UUID=")) { // should have a new session id for samplify database
+                    def uuid = UUID.randomUUID()
+                    writer.writeLine "export NXF_UUID=${uuid}"
+                    nxfuuidWritten = true
+                } else if (line.startsWith('cd ${PUBLISH_DIR}')) { // cd ${PUBLISH_DIR}
+                    // use the working directory per launchify
+                    writer.writeLine 'cd ${WORKING_DIR}'
+                    workingDirWritten = true
+                } else if (line.startsWith("nextflow ")) { // nextflow run ...
+                    if (!nxfuuidWritten) {
+                        def uuid = UUID.randomUUID()
+                        writer.writeLine "export NXF_UUID=${uuid}"
+                        nxfuuidWritten = true
+                    }
+                    if (!workingDirWritten) {
+                        writer.writeLine 'mkdir -p ${WORKING_DIR}'
+                        writer.writeLine 'cd ${WORKING_DIR}'
+                        workingDirWritten = true
+                    }
+                    writer.writeLine "${line}"
                 } else { // pass-thru
                     writer.writeLine "${line}"
                 }
@@ -892,7 +956,7 @@ class NwgcONTCore {
         if (log!=null) { log.info("Setup release bash param-file ${template} --> ${derivativeFile}") }
     }
 
-    public static Map setupRelease(runAcquisitionsList, sampleId, ontDataFolder, outPrefix, backendEmailReroute=false) {
+    public static Map setupRelease(runAcquisitionsList, sampleId, sampleDirectory, ontDataFolder, outPrefix, backendEmailReroute=false) {
         /*
             set up the folder if not existing
             set up the subfolder for <ontDataFolder>/release_sup
@@ -912,7 +976,7 @@ class NwgcONTCore {
         if (log!=null) { log.info("ontDataReleaseFolder = '${ontDataReleaseFolder.toString()}'") }
 
         def releaseScript = "${ontDataReleaseFolder.toString()}/${RELEASE_BASH_SCRIPT}"
-        def paramFileFPN = getParamFile(wfMeta.launchDir, wfMeta.commandLine)
+        def paramFileFPN = getParamFile(sampleDirectory, wfMeta.commandLine)
         File paramFileUsed = new File(paramFileFPN)
         def releaseParamFile = "${ontDataReleaseFolder.toString()}/${paramFileUsed.getName()}"
 
@@ -932,6 +996,7 @@ class NwgcONTCore {
         }
 
         // TODO: name of output file!
+        // this has no effect as we link to the sampleDir
         if (newSetup>0) {
             // remove the checksum and bam file
             def releaseBam = "${ontDataReleaseFolder}/${outPrefix}.bam"
@@ -953,23 +1018,28 @@ class NwgcONTCore {
         }
 
         // release should NOT be done if there is no signal file!
+        // To ensure that every "Merge" request on Samplify will trigger a new copy of .yaml & .sh for "Final Merge"
+        boolean toSetup = true
+        /*
         boolean toSetup = false
         if (totalSetup>0) {
             File file = new File(releaseScript)
             if (!file.exists()) {
+                if (log!=null) { log.info("${totalSetup} data files detected but the script is missing. To create script.") }
                 toSetup = true
-            } else {
-                file = new File(releaseParamFile)
-                if (!file.exists()) {
-                    toSetup = true
-                }
+            }
+            file = new File(releaseParamFile)
+            if (!file.exists()) {
+                if (log!=null) { log.info("${totalSetup} data files detected but the parameter file is missing. To create parameter file.") }
+                toSetup = true
             }
         }
+        */
 
         if (newSetup>0 || toSetup) {
             setupReleaseDataBashScript(
-                "${wfMeta.launchDir}/${PARENT_BASH_SCRIPT}", 
-                releaseScript, sampleId, ontDataFolder, totalSetup, paramFileUsed.getName(), backendEmailReroute)
+                "${sampleDirectory}/${PARENT_BASH_SCRIPT}", 
+                releaseScript, sampleId, ontDataFolder, totalSetup, releaseParamFile, backendEmailReroute)
 
             setupSUPReleaseDataParamsYAML(
                 paramFileFPN, 
