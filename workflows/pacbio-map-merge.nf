@@ -9,20 +9,26 @@ include { CHECKSUM_BAM } from '../modules/checksum_bam.nf'
 workflow PACBIO_MAP_MERGE {
 
     main:
-        def hiFiBams = Channel.fromPath(params.hiFiBams)
-        def fastqs = Channel.fromPath(params.pacbioFastqs)
+        ch_hiFiBams = Channel.empty()
+        if (!params.hiFiBams.isEmpty()) {
+            ch_hiFiBams = Channel.fromPath(hiFiBams)
+        }
+        ch_fastqs = Channel.empty()
+        if (!params.pacbioFastqs.isEmpty()) {
+           ch_fastqs = Channel.fromPath(params.pacbioFastqs)
+        }
 
         // Map HiFi Bams
         if (params.stripKinetics) {
-            STRIP_KINETICS(hiFiBams)
+            STRIP_KINETICS(ch_hiFiBams)
             MAP_HIFI_BAM(STRIP_KINETICS.out.bam)
         }
         else {
-            MAP_HIFI_BAM(hiFiBams)
+            MAP_HIFI_BAM(ch_hiFiBams)
         }
 
         // Map PacBio Fastqs
-        MAP_PACBIO_FASTQ(fastqs)
+        MAP_PACBIO_FASTQ(ch_fastqs)
 
         // NM TAGS
         ADD_NM_TAGS(MAP_HIFI_BAM.out.mapped_bam)
