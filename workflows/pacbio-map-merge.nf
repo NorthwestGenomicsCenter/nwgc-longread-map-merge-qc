@@ -1,15 +1,18 @@
 include { STRIP_KINETICS } from '../modules/strip_kinetics.nf'
 include { MAP_HIFI_BAM } from '../modules/map_hifi_bam.nf'
+include { MAP_PACBIO_FASTQ } from '../modules/map_pacbio_fastq.nf'
 include { MERGE_MAPPED_BAMS } from '../modules/merge_mapped_bams.nf'
 include { ADD_NM_TAGS } from '../modules/add_nm_tags.nf'
+include { ADD_NM_TAGS AS ADD_NM_TAGS_FASTQS } from '../modules/add_nm_tags.nf'
 include { CHECKSUM_BAM } from '../modules/checksum_bam.nf'
 
 workflow PACBIO_MAP_MERGE {
 
     main:
-        def hiFiBams = Channel.fromPath(params.hiFiBams, checkIfExists: true)
+        def hiFiBams = Channel.fromPath(params.hiFiBams)
+        def fastqs = Channel.fromPath(params.pacbioFastqs)
 
-        // Map
+        // Map HiFi Bams
         if (params.stripKinetics) {
             STRIP_KINETICS(hiFiBams)
             MAP_HIFI_BAM(STRIP_KINETICS.out.bam)
@@ -18,13 +21,20 @@ workflow PACBIO_MAP_MERGE {
             MAP_HIFI_BAM(hiFiBams)
         }
 
+        // Map PacBio Fastqs
+        MAP_PACBIO_FASTQ(fastqs)
+
         // NM TAGS
         ADD_NM_TAGS(MAP_HIFI_BAM.out.mapped_bam)
+        ADD_NM_TAGS_FASTQS(MAP_PACBIO_FASTQ.out.mapped.bam)
 
         def outFolder = "${params.sampleDirectory}"
         def outPrefix = "${params.sampleId}.${params.sequencingTarget}"
         // Merge
-        MERGE_MAPPED_BAMS(ADD_NM_TAGS.out.nm_bam.collect(), outFolder, outPrefix)
+        def ch_mapOut = Channel.empty()
+        ch_mapOut = ch_mapOut.mix(ADD_NM_TAGS.out.nm_bam.collect())
+        ch_mapOut = ch_mapOut.mix(ADD_NM_TAGS_FASTQS.out.nm_bam.collect())
+        MERGE_MAPPED_BAMS(ch_mapOut, outFolder, outPrefix)
 
         // checksum
         CHECKSUM_BAM(MERGE_MAPPED_BAMS.out.merged_sorted_bam, MERGE_MAPPED_BAMS.out.bai, outFolder)
