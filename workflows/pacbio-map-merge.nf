@@ -3,7 +3,7 @@ include { MAP_HIFI_BAM } from '../modules/map_hifi_bam.nf'
 include { MAP_PACBIO_FASTQ } from '../modules/map_pacbio_fastq.nf'
 include { MERGE_MAPPED_BAMS } from '../modules/merge_mapped_bams.nf'
 include { ADD_NM_TAGS } from '../modules/add_nm_tags.nf'
-include { ADD_NM_TAGS AS ADD_NM_TAGS_FASTQS } from '../modules/add_nm_tags.nf'
+include { ADD_NM_TAGS as ADD_NM_TAGS_FASTQS } from '../modules/add_nm_tags.nf'
 include { CHECKSUM_BAM } from '../modules/checksum_bam.nf'
 
 workflow PACBIO_MAP_MERGE {
