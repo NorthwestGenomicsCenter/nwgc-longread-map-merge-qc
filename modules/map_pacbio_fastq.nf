@@ -13,6 +13,7 @@ process MAP_PACBIO_FASTQ {
         def numCPUs = Integer.valueOf("$task.cpus")
         def align_threads = numCPUs
         def sort_threads = Math.min(8, Math.ceil(numCPUs/4).intValue())
+        def read_group = "'@RG\\tID:" + ${fastq} + "." + ${task.index} + "\\tPL:PACBIO\\tSM:" + ${params.sampleId} + "'"
 
         """
         pbmm2 \\
@@ -20,7 +21,7 @@ process MAP_PACBIO_FASTQ {
             --num-threads ${task.cpus} \\
             --unmapped \\
             --sort -J $sort_threads -m 2G \\
-            --rg '@RG\tID:${fastq}.${task.index}\tPL:PACBIO\tSM:${params.sampleId}' \\
+            --rg $read_group \\
             $params.referenceGenome \\
             $fastq \\
             ${fastq}.mapped.bam
