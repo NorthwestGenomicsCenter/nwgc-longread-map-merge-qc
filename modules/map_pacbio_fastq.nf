@@ -1,6 +1,6 @@
-process MAP_HIFI_BAM {
+process MAP_PACBIO_FASTQ {
 
-    label "MAP_HIFI_BAM_${params.sampleId}_${params.userId}"
+    label "MAP_PACBIO_FASTQ_${params.sampleId}_${params.userId}_${task.index}"
 
     input:
         path fastq
