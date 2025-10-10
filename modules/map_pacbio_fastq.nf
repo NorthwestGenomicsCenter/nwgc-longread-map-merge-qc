@@ -1,6 +1,6 @@
 process MAP_PACBIO_FASTQ {
 
-    label "MAP_PACBIO_FASTQ_${params.sampleId}_${params.userId}_${task.index}"
+    label "MAP_PACBIO_FASTQ_${params.sampleId}_${params.userId}"
 
     input:
         path fastq
@@ -10,10 +10,12 @@ process MAP_PACBIO_FASTQ {
         path "versions.yaml", emit: versions
 
     script:
+
         def numCPUs = Integer.valueOf("$task.cpus")
         def align_threads = numCPUs
         def sort_threads = Math.min(8, Math.ceil(numCPUs/4).intValue())
-        def read_group = "'@RG\\tID:" + ${fastq} + "." + ${task.index} + "\\tPL:PACBIO\\tSM:" + ${params.sampleId} + "'"
+        def read_group = Utils.defineReadGroup(fastq.baseName, "${params.sampleId}")
+        def outfile = fastq.baseName + ".mapped.bam"
 
         """
         pbmm2 \\
@@ -24,7 +26,7 @@ process MAP_PACBIO_FASTQ {
             --rg $read_group \\
             $params.referenceGenome \\
             $fastq \\
-            ${fastq}.mapped.bam
+            $outfile
 
         cat <<-END_VERSIONS > versions.yaml
         '${task.process}_${task.index}':

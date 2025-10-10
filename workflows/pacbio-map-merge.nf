@@ -13,9 +13,13 @@ workflow PACBIO_MAP_MERGE {
         if (params.hiFiBams) {
             ch_hiFiBams = Channel.fromPath(hiFiBams)
         }
+
         ch_fastqs = Channel.empty()
-        if (params.pacbioFastqs) {
-           ch_fastqs = Channel.fromPath(params.pacbioFastqs)
+        if (params.pacbioFastqsFolder) {
+           fastqFolderChannel = Channel.fromPath( params.pacbioFastqsFolder + "/*.fastq")
+           ch_fastqs = ch_fastqs.concat(fastqFolderChannel)
+           zippedFastqFolderChannel = Channel.fromPath( params.pacbioFastqsFolder + "/*.fastq.gz")
+           ch_fastqs = ch_fastqs.concat(zippedFastqFolderChannel)
         }
 
         // Map HiFi Bams
@@ -32,12 +36,12 @@ workflow PACBIO_MAP_MERGE {
 
         // NM TAGS
         ADD_NM_TAGS(MAP_HIFI_BAM.out.mapped_bam)
-        ADD_NM_TAGS_FASTQS(MAP_PACBIO_FASTQ.out.mapped.bam)
+        ADD_NM_TAGS_FASTQS(MAP_PACBIO_FASTQ.out.mapped_bam)
 
         def outFolder = "${params.sampleDirectory}"
         def outPrefix = "${params.sampleId}.${params.sequencingTarget}"
         // Merge
-        def ch_mapOut = Channel.empty()
+        ch_mapOut = Channel.empty()
         ch_mapOut = ch_mapOut.mix(ADD_NM_TAGS.out.nm_bam.collect())
         ch_mapOut = ch_mapOut.mix(ADD_NM_TAGS_FASTQS.out.nm_bam.collect())
         MERGE_MAPPED_BAMS(ch_mapOut, outFolder, outPrefix)
